@@ -1,0 +1,29 @@
+{
+  "name": "price-calculator",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "dev": "next",
+    "start": "nodemon index.js"
+  },
+  "author": "Rishitha",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.21.0",
+    "geo-distance-js": "^0.0.2",
+    "mongodb": "^6.9.0",
+    "mongoose": "^8.6.3",
+    "next": "^14.2.13",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "redis": "^4.7.0",
+    "woocommerce-api": "^1.5.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
