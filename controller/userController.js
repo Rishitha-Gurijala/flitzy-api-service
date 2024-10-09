@@ -3,6 +3,8 @@ var dist = require('geo-distance-js');
 
 const WooCommerceApi = require('woocommerce-api');
 const wooConfig = require('../wooConfig');
+const constantFields = require('../constantFields.js');
+
 
 
 
@@ -75,9 +77,35 @@ async function calculatePrice(req, res) {
 
 function getProductsWoo(req, response) {
     WooCommerce.get('products', function (err, data, res) {
-        return response.json(JSON.parse(res));
+        let rawJson = JSON.parse(res);
+        let finalProductsList = getFinalOutputJson(rawJson, constantFields.products);
+        return response.json(finalProductsList);
     })
 }
+
+
+function getFinalOutputJson(rawJson, requiredIds) {
+    let finalProductsList = [];
+    rawJson.map((i) => {
+        let resObj = {};
+        for (let field of Object.keys(i)) {
+            if (requiredIds.includes(field)) {
+                resObj[field] = i[field];
+            }
+        }
+        finalProductsList.push(resObj);
+    });
+    return finalProductsList;
+}
+
+function getCategories(req, response) {
+    WooCommerce.get('products/categories', function (err, data, res) {
+        let rawJson = JSON.parse(res);
+        let finalProductsList = getFinalOutputJson(rawJson, constantFields.categories);
+        return response.json(finalProductsList);
+    })
+}
+
 
 
 function calculatePriceFromDistance(distance, transportPerCity) {
@@ -96,5 +124,6 @@ function calculatePriceFromDistance(distance, transportPerCity) {
 module.exports = {
     create,
     calculatePrice,
+    getCategories,
     getProductsWoo
 };
