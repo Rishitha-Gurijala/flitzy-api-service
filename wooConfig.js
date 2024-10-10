@@ -1,7 +1,7 @@
 const wooConfig = {
-    siteUrl: 'http://localhost/wordpressonmac',
-    consumerKey: 'ck_a7286d041b4960ca40bde8acda67a492df928203',
-    consumerSecret: 'cs_33695a9cfc6e7c7d6d5b0a56316ee4e0e35285fa'
+    siteUrl: 'https://flitzy.in/',
+    consumerKey: 'ck_c9c95fa9c4b8f368e272ee1cf15cf5a4c7f9bbf2',
+    consumerSecret: 'cs_bfdbe11267b591ea1db9216ce26a1c0683150a7d'
 }
 
 module.exports = wooConfig;

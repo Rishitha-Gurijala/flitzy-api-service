@@ -107,6 +107,14 @@ function getCategories(req, response) {
 }
 
 
+function getOrders(req, response) {
+    WooCommerce.get('orders', function (err, data, res) {
+        let rawJson = JSON.parse(res);
+        // let finalProductsList = getFinalOutputJson(rawJson, constantFields.categories);
+        return response.json(rawJson);
+    })
+}
+
 
 function calculatePriceFromDistance(distance, transportPerCity) {
     for (let transp of transportPerCity) {
@@ -125,5 +133,6 @@ module.exports = {
     create,
     calculatePrice,
     getCategories,
+    getOrders,
     getProductsWoo
 };
