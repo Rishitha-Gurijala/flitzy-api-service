@@ -7,6 +7,7 @@ const constantFields = {
         'regular_price',
         'sale_price',
         'rating_count',
+        'images',
         'average_rating',
         'short_description',
         'description',

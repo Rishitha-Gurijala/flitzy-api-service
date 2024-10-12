@@ -75,12 +75,26 @@ async function calculatePrice(req, res) {
     return res.status(200).send(price);
 }
 
-function getProductsWoo(req, response) {
+function getProducts(req, response) {
     WooCommerce.get('products', function (err, data, res) {
         let rawJson = JSON.parse(res);
         let finalProductsList = getFinalOutputJson(rawJson, constantFields.products);
+        finalProductsList = refactorProductsObject(finalProductsList);
         return response.json(finalProductsList);
     })
+}
+
+function refactorProductsObject(finalProductsList) {
+    let finalList = [];
+    for(let prod of finalProductsList) {
+        let eachProd = prod;
+        eachProd.image = prod.images[0].src;
+        eachProd.category = [prod.categories[0].name];
+        delete eachProd.categories;
+        delete eachProd.images;
+        finalList.push(eachProd);
+    }
+    return finalList;
 }
 
 
@@ -102,8 +116,31 @@ function getCategories(req, response) {
     WooCommerce.get('products/categories', function (err, data, res) {
         let rawJson = JSON.parse(res);
         let finalProductsList = getFinalOutputJson(rawJson, constantFields.categories);
+        finalProductsList = refactorCategoriesObject(finalProductsList);
         return response.json(finalProductsList);
     })
+}
+
+function refactorCategoriesObject(finalProductsList) {
+    let finalList = [];
+    for(let prod of finalProductsList) {
+        let eachProd = {};
+        eachProd.id = prod.id;
+        eachProd.name = prod.name;
+        let image = prod.image;
+        if(image) {
+            eachProd.image = image.src;
+            eachProd.created_at = image.date_created;
+            eachProd.updated_at = image.date_modified;
+            finalList.push(eachProd);
+        }
+    }
+    return finalList;
+}
+
+function getSlides(req, res) {
+    let finalProductsList =[{"created_at": "2023-10-06T09:24:24.000000Z", "id": 1, "image": "https://dine-hub.rn-admin.site/storage/N1uHQjbLRjFdDm46nMC5UjJHPfhhZgvrPfUJ8HS2.png", "updated_at": "2023-10-06T09:24:24.000000Z"}, {"created_at": "2023-10-06T09:24:31.000000Z", "id": 2, "image": "https://dine-hub.rn-admin.site/storage/TbyfNs5en7Ppcbrag2Blzi8qAK8sqpW8VfLQH6tW.png", "updated_at": "2023-10-06T09:24:31.000000Z"}, {"created_at": "2023-10-06T09:24:38.000000Z", "id": 3, "image": "https://dine-hub.rn-admin.site/storage/xyOj6UP0VbncyzZdkQdKBmFTOVU3OkXscyZPQLpj.png", "updated_at": "2023-10-06T09:24:38.000000Z"}]
+    return res.json(finalProductsList);
 }
 
 
@@ -134,5 +171,6 @@ module.exports = {
     calculatePrice,
     getCategories,
     getOrders,
-    getProductsWoo
+    getSlides,
+    getProducts
 };
