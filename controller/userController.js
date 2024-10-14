@@ -6,8 +6,6 @@ const wooConfig = require('../wooConfig');
 const constantFields = require('../constantFields.js');
 
 
-
-
 const WooCommerce = new WooCommerceApi({
     url: wooConfig.siteUrl,
     consumerKey: wooConfig.consumerKey,
@@ -75,11 +73,35 @@ async function calculatePrice(req, res) {
     return res.status(200).send(price);
 }
 
-function getProducts(req, response) {
-    WooCommerce.get('products', function (err, data, res) {
+async function getProducts(req, response) {
+    WooCommerce.get('products', async function (err, data, res) {
         let rawJson = JSON.parse(res);
         let finalProductsList = getFinalOutputJson(rawJson, constantFields.products);
         finalProductsList = refactorProductsObject(finalProductsList);
+        
+        let redisKey = 'allCategories';
+        let categoriesData = await client.get(redisKey);
+        categoriesData = JSON.parse(categoriesData);
+
+        let categoriesObject = {};
+        for (let cat of categoriesData) {
+            let obj = {};
+            if (cat.parent) {
+                obj = categoriesData.find(o => o.id === cat.parent);
+            }
+            categoriesObject[cat.id] = obj.name;
+        }
+        finalProductsList.map((product) => {
+            let catId = product.category.id;
+            product.subCategory = '';
+            if (!categoriesObject[catId]) {
+                product.category = [product.category.name]
+            } else {
+                product.subCategory = product.category.name;
+                product.category = [categoriesObject[product.category.id]];
+            }
+        })
+
         return response.json(finalProductsList);
     })
 }
@@ -89,7 +111,7 @@ function refactorProductsObject(finalProductsList) {
     for(let prod of finalProductsList) {
         let eachProd = prod;
         eachProd.image = prod.images[0].src;
-        eachProd.category = [prod.categories[0].name];
+        eachProd.category = prod.categories[0];
         delete eachProd.categories;
         delete eachProd.images;
         finalList.push(eachProd);
@@ -112,28 +134,31 @@ function getFinalOutputJson(rawJson, requiredIds) {
     return finalProductsList;
 }
 
-function getCategories(req, response) {
-    WooCommerce.get('products/categories', function (err, data, res) {
+async function getCategories(req, response) {
+    WooCommerce.get('products/categories', async function (err, data, res) {
         let rawJson = JSON.parse(res);
         let finalProductsList = getFinalOutputJson(rawJson, constantFields.categories);
         finalProductsList = refactorCategoriesObject(finalProductsList);
-        return response.json(finalProductsList);
+
+    let redisKey = 'allCategories';
+    await client.set(redisKey, JSON.stringify(finalProductsList));
+
+    finalProductsList = finalProductsList.filter(o => !o.parent);
+    return response.json(finalProductsList);
     })
 }
 
 function refactorCategoriesObject(finalProductsList) {
     let finalList = [];
     for(let prod of finalProductsList) {
-        let eachProd = {};
-        eachProd.id = prod.id;
-        eachProd.name = prod.name;
+        let eachProd = prod;
         let image = prod.image;
         if(image) {
             eachProd.image = image.src;
             eachProd.created_at = image.date_created;
             eachProd.updated_at = image.date_modified;
-            finalList.push(eachProd);
         }
+        finalList.push(eachProd);
     }
     return finalList;
 }

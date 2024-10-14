@@ -17,6 +17,7 @@ const constantFields = {
     categories: [
         'id',
         'name',
+        'parent',
         'image'
     ]
 };
