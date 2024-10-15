@@ -34,6 +34,23 @@ async function create(req, res) {
     }
 }
 
+async function  updateLocation (req, res, next)  {
+    console.log(JSON.stringify(req.body))
+    const { longitude, latitude, pin_save_name, house_name, address, nearby_location, pin_code} = req.body; 
+    try {
+      
+          
+        var userCollection = "users_details";
+        let db = await mongoConnect();
+        await db.collection(userCollection).updateOne({ user_id: req.userId}, {$set: { longitude: longitude, latitude: latitude, pin_save_name: pin_save_name, house_name: house_name, address: address, nearby_location: nearby_location, pin_code: pin_code}});
+        
+        res.status(200).send(`Address updated successfully`);
+       
+    } catch (error) {
+        res.status(error?.status || 400).send(error?.message || 'Something went wrong');
+    }
+};
+
 async function calculatePrice(req, res) {
     let params = req.params;
     let userId = params.userId;
@@ -197,5 +214,6 @@ module.exports = {
     getCategories,
     getOrders,
     getSlides,
-    getProducts
+    getProducts,
+    updateLocation
 };
