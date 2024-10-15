@@ -1,5 +1,10 @@
 let express = require('express');
 global.app = express();
+let bodyParser = require('body-parser');
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.raw());
+app.use(bodyParser.text());
 const {
     getRoutes
 } = require("./routes/routes.js");
@@ -12,7 +17,6 @@ client.connect();
 const dotenv = require('dotenv');
 dotenv.config();
 const PORT = process.env.PORT || 3001;
-
 getRoutes();
 
 app.listen(PORT);
