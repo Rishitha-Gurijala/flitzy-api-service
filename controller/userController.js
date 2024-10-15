@@ -1,5 +1,6 @@
 const { mongoConnect } = require("../mongoConnect.js");
 var dist = require('geo-distance-js');
+const _ = require("lodash");
 
 const WooCommerceApi = require('woocommerce-api');
 const wooConfig = require('../wooConfig');
@@ -154,11 +155,64 @@ async function storeWishList(req, res) {
     let redisKey = 'allProducts';
     let productsData = await client.get(redisKey);
     productsData = JSON.parse(productsData);
+    let collection = "users_details";
 
     let body = req.body; 
+    let userId = req?.body?.userId;
+    let db = await mongoConnect();
+    let userExist = await db.collection(collection).findOne({ user_id: userId });
+    if(body?.operation && body?.operation == 'add' && userExist) {
+        let wishListItems = userExist.wishListItems ? userExist.wishListItems : [];
+        wishListItems.push(body.wishListProduct);
+        wishListItems = _.uniq(wishListItems);
+        await db.collection(collection).updateOne({ user_id: userId }, {
+            $set:{
+                wishListItems
+            }
+        });
+        let finalProductsList = [{
+            message: "Item added to Wishlist"
+        }]
+        return res.json(finalProductsList);
+    }
+    else if(body?.operation && body?.operation == 'delete' && userExist) {
+        let wishListItems = userExist.wishListItems ? userExist.wishListItems : [];
+        wishListItems = wishListItems.filter(function(item) {
+            return item !== body.wishListProduct
+        })
+        await db.collection(collection).updateOne({ user_id: userId }, {
+            $set:{
+                wishListItems
+            }
+        });
+        let finalProductsList = [{
+            message: "Item deleted from Wishlist"
+        }]
+        return res.json(finalProductsList);
+    }
+}
 
-    console.log('chbhjf');
+async function getWishListItems(req, res) {
+    let redisKeyProd = 'allProducts';
+    let allProducts = await client.get(redisKeyProd);
+    allProducts = JSON.parse(allProducts);
+    let collection = "users_details"
 
+    let userId = req.body.userId;
+
+    let db = await mongoConnect();
+    let userExist = await db.collection(collection).findOne({ user_id: userId });
+    let wishListItems = userExist.wishListItems;
+    let finalProductsList = [];
+    allProducts.map((prod) => {
+        if(wishListItems.includes(prod.id)) {
+            finalProductsList.push(prod);
+        }
+    })
+    return res.json(finalProductsList);
+
+
+    
 }
 
 function refactorProductsObject(finalProductsList) {
@@ -210,5 +264,6 @@ module.exports = {
     getOrders,
     getSlides,
     storeWishList,
+    getWishListItems,
     getProducts
 };
