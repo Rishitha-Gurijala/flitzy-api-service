@@ -155,7 +155,7 @@ async function storeWishList(req, res) {
     let productsData = await client.get(redisKey);
     productsData = JSON.parse(productsData);
 
-    let body = req.body;
+    let body = req.body; 
 
     console.log('chbhjf');
 
