@@ -6,6 +6,7 @@ const {
     getCategories,
     getSlides,
     getOrders,
+    storeWishList,
 } = require("../controller/userController.js");
 
 
@@ -15,6 +16,7 @@ function getRoutes() {
     app.get("/api/categories", getCategories);
     app.get("/api/slides", getSlides);
     app.get("/api/orders", getOrders);
+    app.post("/api/wishlist", storeWishList);
     app.get("/user/create/:userId", create);
 }
 

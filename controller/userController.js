@@ -34,6 +34,20 @@ async function create(req, res) {
     }
 }
 
+
+function calculatePriceFromDistance(distance, transportPerCity) {
+    for (let transp of transportPerCity) {
+        let slabSplit = transp.slab.split('-');
+        let lowerLimit = parseInt(slabSplit[0]);
+        let higherLimit = parseInt(slabSplit[1]);
+        if (distance > lowerLimit && distance <= higherLimit) {
+            return transp.price;
+        }
+    }
+    return '10';
+
+}
+
 async function calculatePrice(req, res) {
     let params = req.params;
     let userId = params.userId;
@@ -102,8 +116,49 @@ async function getProducts(req, response) {
             }
         })
 
+        let redisKeyProd = 'allProducts';
+        await client.set(redisKeyProd, JSON.stringify(finalProductsList));
+    
         return response.json(finalProductsList);
     })
+}
+
+async function getCategories(req, response) {
+    WooCommerce.get('products/categories', async function (err, data, res) {
+        let rawJson = JSON.parse(res);
+        let finalProductsList = getFinalOutputJson(rawJson, constantFields.categories);
+        finalProductsList = refactorCategoriesObject(finalProductsList);
+
+    let redisKey = 'allCategories';
+    await client.set(redisKey, JSON.stringify(finalProductsList));
+
+    finalProductsList = finalProductsList.filter(o => !o.parent);
+    return response.json(finalProductsList);
+    })
+}
+
+function getSlides(req, res) {
+    let finalProductsList =[{"created_at": "2023-10-06T09:24:24.000000Z", "id": 1, "image": "https://dine-hub.rn-admin.site/storage/N1uHQjbLRjFdDm46nMC5UjJHPfhhZgvrPfUJ8HS2.png", "updated_at": "2023-10-06T09:24:24.000000Z"}, {"created_at": "2023-10-06T09:24:31.000000Z", "id": 2, "image": "https://dine-hub.rn-admin.site/storage/TbyfNs5en7Ppcbrag2Blzi8qAK8sqpW8VfLQH6tW.png", "updated_at": "2023-10-06T09:24:31.000000Z"}, {"created_at": "2023-10-06T09:24:38.000000Z", "id": 3, "image": "https://dine-hub.rn-admin.site/storage/xyOj6UP0VbncyzZdkQdKBmFTOVU3OkXscyZPQLpj.png", "updated_at": "2023-10-06T09:24:38.000000Z"}]
+    return res.json(finalProductsList);
+}
+
+function getOrders(req, response) {
+    WooCommerce.get('orders', function (err, data, res) {
+        let rawJson = JSON.parse(res);
+        // let finalProductsList = getFinalOutputJson(rawJson, constantFields.categories);
+        return response.json(rawJson);
+    })
+}
+
+async function storeWishList(req, res) {
+    let redisKey = 'allProducts';
+    let productsData = await client.get(redisKey);
+    productsData = JSON.parse(productsData);
+
+    let body = req.body;
+
+    console.log('chbhjf');
+
 }
 
 function refactorProductsObject(finalProductsList) {
@@ -119,7 +174,6 @@ function refactorProductsObject(finalProductsList) {
     return finalList;
 }
 
-
 function getFinalOutputJson(rawJson, requiredIds) {
     let finalProductsList = [];
     rawJson.map((i) => {
@@ -132,20 +186,6 @@ function getFinalOutputJson(rawJson, requiredIds) {
         finalProductsList.push(resObj);
     });
     return finalProductsList;
-}
-
-async function getCategories(req, response) {
-    WooCommerce.get('products/categories', async function (err, data, res) {
-        let rawJson = JSON.parse(res);
-        let finalProductsList = getFinalOutputJson(rawJson, constantFields.categories);
-        finalProductsList = refactorCategoriesObject(finalProductsList);
-
-    let redisKey = 'allCategories';
-    await client.set(redisKey, JSON.stringify(finalProductsList));
-
-    finalProductsList = finalProductsList.filter(o => !o.parent);
-    return response.json(finalProductsList);
-    })
 }
 
 function refactorCategoriesObject(finalProductsList) {
@@ -163,39 +203,12 @@ function refactorCategoriesObject(finalProductsList) {
     return finalList;
 }
 
-function getSlides(req, res) {
-    let finalProductsList =[{"created_at": "2023-10-06T09:24:24.000000Z", "id": 1, "image": "https://dine-hub.rn-admin.site/storage/N1uHQjbLRjFdDm46nMC5UjJHPfhhZgvrPfUJ8HS2.png", "updated_at": "2023-10-06T09:24:24.000000Z"}, {"created_at": "2023-10-06T09:24:31.000000Z", "id": 2, "image": "https://dine-hub.rn-admin.site/storage/TbyfNs5en7Ppcbrag2Blzi8qAK8sqpW8VfLQH6tW.png", "updated_at": "2023-10-06T09:24:31.000000Z"}, {"created_at": "2023-10-06T09:24:38.000000Z", "id": 3, "image": "https://dine-hub.rn-admin.site/storage/xyOj6UP0VbncyzZdkQdKBmFTOVU3OkXscyZPQLpj.png", "updated_at": "2023-10-06T09:24:38.000000Z"}]
-    return res.json(finalProductsList);
-}
-
-
-function getOrders(req, response) {
-    WooCommerce.get('orders', function (err, data, res) {
-        let rawJson = JSON.parse(res);
-        // let finalProductsList = getFinalOutputJson(rawJson, constantFields.categories);
-        return response.json(rawJson);
-    })
-}
-
-
-function calculatePriceFromDistance(distance, transportPerCity) {
-    for (let transp of transportPerCity) {
-        let slabSplit = transp.slab.split('-');
-        let lowerLimit = parseInt(slabSplit[0]);
-        let higherLimit = parseInt(slabSplit[1]);
-        if (distance > lowerLimit && distance <= higherLimit) {
-            return transp.price;
-        }
-    }
-    return '10';
-
-}
-
 module.exports = {
     create,
     calculatePrice,
     getCategories,
     getOrders,
     getSlides,
+    storeWishList,
     getProducts
 };
