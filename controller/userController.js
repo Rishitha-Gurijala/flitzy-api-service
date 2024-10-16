@@ -139,13 +139,32 @@ async function getCategories(req, response) {
     let redisKey = 'allCategories';
     await client.set(redisKey, JSON.stringify(finalProductsList));
 
-    finalProductsList = finalProductsList.filter(o => !o.parent);
+    finalProductsList = finalProductsList.filter(o => !o.parent && o.name!="Uncategorized");
     return response.json(finalProductsList);
     })
 }
 
 function getSlides(req, res) {
-    let finalProductsList =[{"created_at": "2023-10-06T09:24:24.000000Z", "id": 1, "image": "https://dine-hub.rn-admin.site/storage/N1uHQjbLRjFdDm46nMC5UjJHPfhhZgvrPfUJ8HS2.png", "updated_at": "2023-10-06T09:24:24.000000Z"}, {"created_at": "2023-10-06T09:24:31.000000Z", "id": 2, "image": "https://dine-hub.rn-admin.site/storage/TbyfNs5en7Ppcbrag2Blzi8qAK8sqpW8VfLQH6tW.png", "updated_at": "2023-10-06T09:24:31.000000Z"}, {"created_at": "2023-10-06T09:24:38.000000Z", "id": 3, "image": "https://dine-hub.rn-admin.site/storage/xyOj6UP0VbncyzZdkQdKBmFTOVU3OkXscyZPQLpj.png", "updated_at": "2023-10-06T09:24:38.000000Z"}]
+    let finalProductsList = [
+        {
+            "created_at": "2023-10-06T09:24:24.000000Z",
+            "id": 1,
+            "image": "https://nurserylive.com/cdn/shop/files/nurserylive-app-home-page-banner-plants-v3_9a4542b8-e6b2-4c88-8c5a-0dc0993fac5f_670x400.jpg?v=1636743230",
+            "updated_at": "2023-10-06T09:24:24.000000Z"
+        },
+        {
+            "created_at": "2023-10-06T09:24:31.000000Z",
+            "id": 2,
+            "image": "https://nurserylive.com/cdn/shop/files/nurserylive-app-home-page-banner-balcony-and-terrace-garden-metal-stand-v3_c1641745-019f-492b-bb98-34fc435c3f8f_670x400.jpg?v=1636743163",
+            "updated_at": "2023-10-06T09:24:31.000000Z"
+        },
+        {
+            "created_at": "2023-10-06T09:24:38.000000Z",
+            "id": 3,
+            "image": "https://nurserylive.com/cdn/shop/files/nurserylive-app-home-page-cactus-and-succulent-banner-v3_1_670x400.jpg?v=1637848499",
+            "updated_at": "2023-10-06T09:24:38.000000Z"
+        }
+    ]
     return res.json(finalProductsList);
 }
 
