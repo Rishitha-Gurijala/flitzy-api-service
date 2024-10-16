@@ -19,6 +19,8 @@ const constantFields = {
         'name',
         'parent',
         'image'
-    ]
+    ],
+    DISCOUNT: 0.5, // 50%
+    MARGIN: 0.1 // 10%
 };
 module.exports = constantFields;

@@ -49,7 +49,7 @@ function calculatePriceFromDistance(distance, transportPerCity) {
 
 }
 
-async function calculatePrice(req, res) {
+async function calculateTransportPrice(req, res) {
     let params = req.params;
     let userId = params.userId;
     let storeId = params.storeId;
@@ -60,7 +60,7 @@ async function calculatePrice(req, res) {
 
     let db = await mongoConnect();
     let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
-    let storeExist = await db.collection(storeCollection).findOne({ store_reg_id: storeId });
+    let storeExist = await db.collection(storeCollection).findOne({ id: storeId });
 
     if (!userExist) {
         return res.status(500).json({ error: "Invalid User" })
@@ -85,6 +85,9 @@ async function calculatePrice(req, res) {
     let price = calculatePriceFromDistance(distance, transportPerCity);
 
 
+    if(res == "returnPrice") {
+        return price;
+    }
     return res.status(200).send(price);
 }
 
@@ -152,9 +155,6 @@ function getOrders(req, response) {
 }
 
 async function storeWishList(req, res) {
-    let redisKey = 'allProducts';
-    let productsData = await client.get(redisKey);
-    productsData = JSON.parse(productsData);
     let collection = "users_details";
 
     let body = req.body; 
@@ -192,13 +192,81 @@ async function storeWishList(req, res) {
     }
 }
 
+async function storeCart(req, res) {
+    let collection = "users_details";
+
+    let body = req.body;
+    let userId = req?.body?.userId;
+    let db = await mongoConnect();
+    let userExist = await db.collection(collection).findOne({ user_id: userId });
+    let cartItems = userExist && userExist.cartItems ? userExist.cartItems : {};
+    if(body?.operation && body?.operation == 'add' && userExist) {
+        let quantityOfItem = 1;
+        if(body.cartProduct in cartItems) {
+            quantityOfItem = cartItems[body.cartProduct] + quantityOfItem;
+        }
+        cartItems[body.cartProduct] = quantityOfItem;
+        await db.collection(collection).updateOne({ user_id: userId }, {
+            $set:{
+                cartItems
+            }
+        });
+    }    
+    else if(body?.operation && body?.operation == 'delete' && userExist) {
+        let quantityOfItem = 1;
+        if(body.cartProduct in cartItems) {
+            quantityOfItem = cartItems[body.cartProduct] - quantityOfItem;
+        }
+        if(quantityOfItem <= 0) {
+            delete cartItems[body.cartProduct];
+        } else {
+            cartItems[body.cartProduct] = quantityOfItem;
+        }
+        await db.collection(collection).updateOne({ user_id: userId }, {
+            $set:{
+                cartItems
+            }
+        });
+    }
+    return res.json(cartItems);
+}
+
+async function calculateTotalPricesOfProducts(cartItems, allProducts, userExist, storeExist) {
+    let regularPrice = 0.00;
+    let salePrice = 0.00;
+    let cartPrice = 0.00;
+    allProducts.map((prod) => {
+        if(Object.keys(cartItems).includes(prod.id) ||
+            Object.keys(cartItems).includes(prod.id.toString())) {
+            regularPrice += prod.regular_price;
+            salePrice += prod.price - prod.regular_price;
+            cartPrice += prod.price;
+        }
+    });
+
+    let request = {
+        params: {
+            userId: userExist.user_id,
+            storeId: storeExist.id
+        }
+    }
+    let transportPrice = await calculateTransportPrice(request, "returnPrice");
+
+    return {
+        vendorPrice: regularPrice + parseFloat(transportPrice),
+        flitzyPrice: salePrice,
+        cartPrice,
+        transportPrice
+    }
+}
+
 async function getWishListItems(req, res) {
     let redisKeyProd = 'allProducts';
     let allProducts = await client.get(redisKeyProd);
     allProducts = JSON.parse(allProducts);
     let collection = "users_details"
 
-    let userId = req.body.userId;
+    let userId = req.params.userId;
 
     let db = await mongoConnect();
     let userExist = await db.collection(collection).findOne({ user_id: userId });
@@ -215,6 +283,64 @@ async function getWishListItems(req, res) {
     
 }
 
+async function getCartListItems(req, res) {
+    let redisKeyProd = 'allProducts';
+    let allProducts = await client.get(redisKeyProd);
+    allProducts = JSON.parse(allProducts);
+    let collection = "users_details"
+
+    let userId = req.params.userId;
+
+    let db = await mongoConnect();
+    let userExist = await db.collection(collection).findOne({ user_id: userId });
+    let cartItems = userExist.cartItems;
+    let finalProductsList = [];
+    allProducts.map((prod) => {
+        if(Object.keys(cartItems).includes(prod.id) ||
+            Object.keys(cartItems).includes(prod.id.toString())) {
+            finalProductsList.push(prod);
+        }
+    })
+    return res.json(finalProductsList);
+}
+
+async function getCheckoutItems(req, res) {
+    let redisKeyProd = 'allProducts';
+    let allProducts = await client.get(redisKeyProd);
+    allProducts = JSON.parse(allProducts);
+    let collection = "users_details";
+    let storeCollection = "store_details";
+
+    let userId = req.params.userId;
+    let storeId = req.params.storeId;
+
+    let db = await mongoConnect();
+    let userExist = await db.collection(collection).findOne({ user_id: userId });
+    let storeExist = await db.collection(storeCollection).findOne({ id: storeId });
+    
+    let cartItems = userExist.cartItems;
+    let finalProductsList = [];
+    allProducts.map((prod) => {
+        if(Object.keys(cartItems).includes(prod.id) ||
+                Object.keys(cartItems).includes(prod.id.toString())) {
+            finalProductsList.push(prod);
+        }
+    });
+    let totalPrices = await calculateTotalPricesOfProducts(cartItems, allProducts, userExist, storeExist);
+    let checkoutDetails = {
+        products: finalProductsList,
+        cartPrice: totalPrices.cartPrice,
+        flitzyPrice: totalPrices.flitzyPrice,
+        vendorPrice: totalPrices.vendorPrice,
+        transportPrice: totalPrices.transportPrice,
+        user_id: userId,
+        store_id: storeId
+    }
+    await db.collection('checkout_details').insertOne(checkoutDetails);
+
+    return res.json(checkoutDetails);
+}
+
 function refactorProductsObject(finalProductsList) {
     let finalList = [];
     for(let prod of finalProductsList) {
@@ -223,9 +349,27 @@ function refactorProductsObject(finalProductsList) {
         eachProd.category = prod.categories[0];
         delete eachProd.categories;
         delete eachProd.images;
+        updatePrices(eachProd);
         finalList.push(eachProd);
     }
     return finalList;
+}
+
+function updatePrices(eachProd) {
+    let actualPrice = parseFloat(eachProd.price);
+
+    let discount = actualPrice * constantFields.DISCOUNT;
+    let margin = actualPrice * constantFields.MARGIN;
+
+
+    let regularPrice = actualPrice + discount + margin;
+    let salePrice = actualPrice + margin;
+
+    eachProd.price = salePrice;
+    eachProd.regular_price = actualPrice;
+    eachProd.sale_price = regularPrice;
+
+    return eachProd;
 }
 
 function getFinalOutputJson(rawJson, requiredIds) {
@@ -259,11 +403,14 @@ function refactorCategoriesObject(finalProductsList) {
 
 module.exports = {
     create,
-    calculatePrice,
+    calculateTransportPrice,
     getCategories,
     getOrders,
     getSlides,
     storeWishList,
     getWishListItems,
+    storeCart,
+    getCartListItems,
+    getCheckoutItems,
     getProducts
 };
