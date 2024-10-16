@@ -19,6 +19,8 @@ let usersCollection = "users_details";
 let storeCollection = "store_details";
 let transportCollection = "city_transport_details";
 let checkoutCollection = "checkout_details";
+let cartCollection = "cart_details";
+let wishlistCollection = "wishlist_details";
 
 
 async function create(req, res) {
@@ -160,33 +162,38 @@ async function storeWishList(req, res) {
     let body = req.body; 
     let userId = req?.body?.userId;
     let db = await mongoConnect();
-    let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
-    if(body?.operation && body?.operation == 'add' && userExist) {
-        let wishListItems = userExist.wishListItems ? userExist.wishListItems : [];
-        wishListItems.push(body.wishListProduct);
-        wishListItems = _.uniq(wishListItems);
-        await db.collection(usersCollection).updateOne({ user_id: userId }, {
+    let userExist = await db.collection(wishlistCollection).findOne({ user_id: userId });
+    if(!userExist) {
+        await db.collection(wishlistCollection).insertOne({ user_id: userId });
+        userExist = { user_id: userId }
+    }
+    if(body?.operation && body?.operation == 'add') {
+        let wishListItems = userExist.wishListItems ? userExist.wishListItems : {};
+        wishListItems[body.wishListProduct] = {
+            created_on: new Date()
+        }
+        await db.collection(wishlistCollection).updateOne({ user_id: userId }, {
             $set:{
                 wishListItems
             }
         });
         let finalProductsList = [{
-            message: "Item added to Wishlist"
+            message: "Item added to Wishlist",
+            data: wishListItems
         }]
         return res.json(finalProductsList);
     }
-    else if(body?.operation && body?.operation == 'delete' && userExist) {
+    else if(body?.operation && body?.operation == 'delete') {
         let wishListItems = userExist.wishListItems ? userExist.wishListItems : [];
-        wishListItems = wishListItems.filter(function(item) {
-            return item !== body.wishListProduct
-        })
-        await db.collection(usersCollection).updateOne({ user_id: userId }, {
+        delete wishListItems[body.wishListProduct];
+        await db.collection(wishlistCollection).updateOne({ user_id: userId }, {
             $set:{
                 wishListItems
             }
         });
         let finalProductsList = [{
-            message: "Item deleted from Wishlist"
+            message: "Item deleted from Wishlist",
+            data: wishListItems
         }]
         return res.json(finalProductsList);
     }
@@ -197,37 +204,53 @@ async function storeCart(req, res) {
     let body = req.body;
     let userId = req?.body?.userId;
     let db = await mongoConnect();
-    let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
-    let cartItems = userExist && userExist.cartItems ? userExist.cartItems : {};
-    if(body?.operation && body?.operation == 'add' && userExist) {
+    let userExist = await db.collection(cartCollection).findOne({ user_id: userId });
+    if(!userExist) {
+        await db.collection(cartCollection).insertOne({ user_id: userId });
+        userExist = { user_id: userId }
+    }
+    let cartItems = userExist.cartItems ? userExist.cartItems : {};
+    if(body?.operation && body?.operation == 'add') {
         let quantityOfItem = 1;
         if(body.cartProduct in cartItems) {
-            quantityOfItem = cartItems[body.cartProduct] + quantityOfItem;
+            quantityOfItem = cartItems[body.cartProduct].quantity + quantityOfItem;
         }
-        cartItems[body.cartProduct] = quantityOfItem;
-        await db.collection(usersCollection).updateOne({ user_id: userId }, {
+        cartItems[body.cartProduct] = {
+            quantity: quantityOfItem,
+            created_on: new Date()
+        };
+        await db.collection(cartCollection).updateOne({ user_id: userId }, {
             $set:{
                 cartItems
             }
         });
+        let finalProductsList = [{
+            message: "Item added to Cart",
+            data: cartItems
+        }]
+        return res.json(finalProductsList);
     }    
-    else if(body?.operation && body?.operation == 'delete' && userExist) {
+    else if(body?.operation && body?.operation == 'delete') {
         let quantityOfItem = 1;
         if(body.cartProduct in cartItems) {
-            quantityOfItem = cartItems[body.cartProduct] - quantityOfItem;
+            quantityOfItem = cartItems[body.cartProduct].quantity - quantityOfItem;
         }
         if(quantityOfItem <= 0) {
             delete cartItems[body.cartProduct];
         } else {
-            cartItems[body.cartProduct] = quantityOfItem;
+            cartItems[body.cartProduct].quantity = quantityOfItem;
         }
-        await db.collection(usersCollection).updateOne({ user_id: userId }, {
+        await db.collection(cartCollection).updateOne({ user_id: userId }, {
             $set:{
                 cartItems
             }
         });
+        let finalProductsList = [{
+            message: "Item deleted from Cart",
+            data: cartItems
+        }]
+        return res.json(finalProductsList);
     }
-    return res.json(cartItems);
 }
 
 async function  updateLocation (req, res, next)  {
@@ -253,9 +276,9 @@ async function calculateTotalPricesOfProducts(cartItems, allProducts, userExist,
     allProducts.map((prod) => {
         if(Object.keys(cartItems).includes(prod.id) ||
             Object.keys(cartItems).includes(prod.id.toString())) {
-            regularPrice += prod.regular_price;
-            salePrice += prod.price - prod.regular_price;
-            cartPrice += prod.price;
+            regularPrice += (prod.regular_price) * prod.quantity;
+            salePrice += (prod.price - prod.regular_price) * prod.quantity;
+            cartPrice += (prod.price) * prod.quantity;
         }
     });
 
@@ -283,11 +306,12 @@ async function getWishListItems(req, res) {
     let userId = req.params.userId;
 
     let db = await mongoConnect();
-    let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
+    let userExist = await db.collection(wishlistCollection).findOne({ user_id: userId });
     let wishListItems = userExist.wishListItems;
     let finalProductsList = [];
     allProducts.map((prod) => {
-        if(wishListItems.includes(prod.id)) {
+        if(Object.keys(wishListItems).includes(prod.id)||
+                Object.keys(wishListItems).includes(prod.id.toString())) {
             finalProductsList.push(prod);
         }
     })
@@ -305,12 +329,13 @@ async function getCartListItems(req, res) {
     let userId = req.params.userId;
 
     let db = await mongoConnect();
-    let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
+    let userExist = await db.collection(cartCollection).findOne({ user_id: userId });
     let cartItems = userExist.cartItems;
     let finalProductsList = [];
     allProducts.map((prod) => {
         if(Object.keys(cartItems).includes(prod.id) ||
             Object.keys(cartItems).includes(prod.id.toString())) {
+            prod.quantity = cartItems[prod.id].quantity;
             finalProductsList.push(prod);
         }
     })
@@ -326,7 +351,7 @@ async function getCheckoutItems(req, res) {
     let storeId = req.params.storeId;
 
     let db = await mongoConnect();
-    let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
+    let userExist = await db.collection(cartCollection).findOne({ user_id: userId });
     let storeExist = await db.collection(storeCollection).findOne({ id: storeId });
     
     let cartItems = userExist.cartItems;
@@ -334,6 +359,7 @@ async function getCheckoutItems(req, res) {
     allProducts.map((prod) => {
         if(Object.keys(cartItems).includes(prod.id) ||
                 Object.keys(cartItems).includes(prod.id.toString())) {
+            prod.quantity = cartItems[prod.id].quantity;
             finalProductsList.push(prod);
         }
     });
