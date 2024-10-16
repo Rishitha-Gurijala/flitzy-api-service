@@ -354,6 +354,7 @@ async function getCheckoutItems(req, res) {
         user_id: userId,
         store_id: storeId
     }
+    checkoutDetails.created_date = new Date();
     await db.collection('checkout_details').insertOne(checkoutDetails);
 
     return res.json(checkoutDetails);
