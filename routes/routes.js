@@ -29,8 +29,8 @@ function getRoutes() {
     app.get("/user/create/:userId", verifyToken, create);
 
     // POST CALLS
-    app.post("/api/wishlist", storeWishList);
-    app.post("/api/cart", storeCart);
+    app.post("/api/wishlist", verifyToken, storeWishList);
+    app.post("/api/cart", verifyToken, storeCart);
     app.post("/api/updateLocation", verifyToken, updateLocation);
 }
 
