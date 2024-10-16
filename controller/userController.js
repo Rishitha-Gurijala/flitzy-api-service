@@ -15,19 +15,23 @@ const WooCommerce = new WooCommerceApi({
     version: "wc/v1"
 });
 
+let usersCollection = "users_details";
+let storeCollection = "store_details";
+let transportCollection = "city_transport_details";
+let checkoutCollection = "checkout_details";
+
 
 async function create(req, res) {
     try {
         let userId = req.params.userId;
-        var collection = "users_details";
         let db = await mongoConnect();
-        let userExist = await db.collection(collection).findOne({ user_id: userId });
+        let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
         if (userExist) {
             return res.status(400).json({
                 message: "User Exists:"
             });
         } else {
-            await db.collection(collection).insertOne({ user_id: userId });
+            await db.collection(usersCollection).insertOne({ user_id: userId });
             return res.status(200).send("User inserted");
         }
     } catch (err) {
@@ -54,9 +58,6 @@ async function calculateTransportPrice(req, res) {
     let userId = params.userId;
     let storeId = params.storeId;
 
-    let usersCollection = "users_details";
-    let storeCollection = "store_details";
-    let transportCollection = "city_transport_details";
 
     let db = await mongoConnect();
     let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
@@ -155,17 +156,16 @@ function getOrders(req, response) {
 }
 
 async function storeWishList(req, res) {
-    let collection = "users_details";
 
     let body = req.body; 
     let userId = req?.body?.userId;
     let db = await mongoConnect();
-    let userExist = await db.collection(collection).findOne({ user_id: userId });
+    let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
     if(body?.operation && body?.operation == 'add' && userExist) {
         let wishListItems = userExist.wishListItems ? userExist.wishListItems : [];
         wishListItems.push(body.wishListProduct);
         wishListItems = _.uniq(wishListItems);
-        await db.collection(collection).updateOne({ user_id: userId }, {
+        await db.collection(usersCollection).updateOne({ user_id: userId }, {
             $set:{
                 wishListItems
             }
@@ -180,7 +180,7 @@ async function storeWishList(req, res) {
         wishListItems = wishListItems.filter(function(item) {
             return item !== body.wishListProduct
         })
-        await db.collection(collection).updateOne({ user_id: userId }, {
+        await db.collection(usersCollection).updateOne({ user_id: userId }, {
             $set:{
                 wishListItems
             }
@@ -193,12 +193,11 @@ async function storeWishList(req, res) {
 }
 
 async function storeCart(req, res) {
-    let collection = "users_details";
 
     let body = req.body;
     let userId = req?.body?.userId;
     let db = await mongoConnect();
-    let userExist = await db.collection(collection).findOne({ user_id: userId });
+    let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
     let cartItems = userExist && userExist.cartItems ? userExist.cartItems : {};
     if(body?.operation && body?.operation == 'add' && userExist) {
         let quantityOfItem = 1;
@@ -206,7 +205,7 @@ async function storeCart(req, res) {
             quantityOfItem = cartItems[body.cartProduct] + quantityOfItem;
         }
         cartItems[body.cartProduct] = quantityOfItem;
-        await db.collection(collection).updateOne({ user_id: userId }, {
+        await db.collection(usersCollection).updateOne({ user_id: userId }, {
             $set:{
                 cartItems
             }
@@ -222,7 +221,7 @@ async function storeCart(req, res) {
         } else {
             cartItems[body.cartProduct] = quantityOfItem;
         }
-        await db.collection(collection).updateOne({ user_id: userId }, {
+        await db.collection(usersCollection).updateOne({ user_id: userId }, {
             $set:{
                 cartItems
             }
@@ -236,10 +235,8 @@ async function  updateLocation (req, res, next)  {
     const { longitude, latitude, pin_save_name, house_name, address, nearby_location, pin_code} = req.body; 
     try {
 
-
-        var userCollection = "users_details";
         let db = await mongoConnect();
-        await db.collection(userCollection).updateOne({ user_id: req.userId}, {$set: { longitude: longitude, latitude: latitude, pin_save_name: pin_save_name, house_name: house_name, address: address, nearby_location: nearby_location, pin_code: pin_code}});
+        await db.collection(usersCollection).updateOne({ user_id: req.userId}, {$set: { longitude: longitude, latitude: latitude, pin_save_name: pin_save_name, house_name: house_name, address: address, nearby_location: nearby_location, pin_code: pin_code}});
 
         res.status(200).send(`Address updated successfully`);
 
@@ -282,12 +279,11 @@ async function getWishListItems(req, res) {
     let redisKeyProd = 'allProducts';
     let allProducts = await client.get(redisKeyProd);
     allProducts = JSON.parse(allProducts);
-    let collection = "users_details"
 
     let userId = req.params.userId;
 
     let db = await mongoConnect();
-    let userExist = await db.collection(collection).findOne({ user_id: userId });
+    let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
     let wishListItems = userExist.wishListItems;
     let finalProductsList = [];
     allProducts.map((prod) => {
@@ -305,12 +301,11 @@ async function getCartListItems(req, res) {
     let redisKeyProd = 'allProducts';
     let allProducts = await client.get(redisKeyProd);
     allProducts = JSON.parse(allProducts);
-    let collection = "users_details"
 
     let userId = req.params.userId;
 
     let db = await mongoConnect();
-    let userExist = await db.collection(collection).findOne({ user_id: userId });
+    let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
     let cartItems = userExist.cartItems;
     let finalProductsList = [];
     allProducts.map((prod) => {
@@ -326,14 +321,12 @@ async function getCheckoutItems(req, res) {
     let redisKeyProd = 'allProducts';
     let allProducts = await client.get(redisKeyProd);
     allProducts = JSON.parse(allProducts);
-    let collection = "users_details";
-    let storeCollection = "store_details";
 
     let userId = req.params.userId;
     let storeId = req.params.storeId;
 
     let db = await mongoConnect();
-    let userExist = await db.collection(collection).findOne({ user_id: userId });
+    let userExist = await db.collection(usersCollection).findOne({ user_id: userId });
     let storeExist = await db.collection(storeCollection).findOne({ id: storeId });
     
     let cartItems = userExist.cartItems;
@@ -355,7 +348,7 @@ async function getCheckoutItems(req, res) {
         store_id: storeId
     }
     checkoutDetails.created_date = new Date();
-    await db.collection('checkout_details').insertOne(checkoutDetails);
+    await db.collection(checkoutCollection).insertOne(checkoutDetails);
 
     return res.json(checkoutDetails);
 }
