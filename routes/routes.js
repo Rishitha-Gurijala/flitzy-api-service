@@ -11,24 +11,27 @@ const {
     storeCart,
     getCartListItems,
     getCheckoutItems,
+    updateLocation
 } = require("../controller/userController.js");
+const {verifyToken} = require('../middleware/authMiddleware');
 
 
 function getRoutes() {
-    app.get("/user/transportPrice/:userId/:storeId", calculateTransportPrice);
-    app.get("/api/products", getProducts);
-    app.get("/api/categories", getCategories);
-    app.get("/api/slides", getSlides);
-    app.get("/api/orders", getOrders);
-    app.get("/api/wishlistItems/:userId", getWishListItems);
-    app.get("/api/cartItems/:userId", getCartListItems);
-    app.get("/api/checkout/:userId/:storeId", getCheckoutItems);
-    app.get("/user/create/:userId", create);
+    // GET CALLS
+    app.get("/user/transportPrice/:userId/:storeId", verifyToken, calculateTransportPrice);
+    app.get("/api/products", verifyToken, getProducts);
+    app.get("/api/categories", verifyToken, getCategories);
+    app.get("/api/slides", verifyToken, getSlides);
+    app.get("/api/orders", verifyToken, getOrders);
+    app.get("/api/wishlistItems/:userId", verifyToken, getWishListItems);
+    app.get("/api/cartItems/:userId", verifyToken, getCartListItems);
+    app.get("/api/checkout/:userId/:storeId", verifyToken, getCheckoutItems);
+    app.get("/user/create/:userId", verifyToken, create);
 
-
-
+    // POST CALLS
     app.post("/api/wishlist", storeWishList);
     app.post("/api/cart", storeCart);
+    app.post("/api/updateLocation", verifyToken, updateLocation);
 }
 
 
