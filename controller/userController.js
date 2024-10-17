@@ -100,7 +100,7 @@ async function getProducts(req, response) {
         let finalProductsList = getFinalOutputJson(rawJson, constantFields.products);
         finalProductsList = refactorProductsObject(finalProductsList);
         
-        let redisKey = 'allCategories';
+        let redisKey = 'allCategories'; 
         let categoriesData = await client.get(redisKey);
         categoriesData = JSON.parse(categoriesData);
 
