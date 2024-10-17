@@ -98,7 +98,7 @@ async function getProducts(req, response) {
     WooCommerce.get('products', async function (err, data, res) {
         let rawJson = JSON.parse(res);
         let finalProductsList = getFinalOutputJson(rawJson, constantFields.products);
-        finalProductsList = refactorProductsObject(finalProductsList);
+        finalProductsList = refactorProductsObject(finalProductsList); 
         
         let redisKey = 'allCategories'; 
         let categoriesData = await client.get(redisKey);
