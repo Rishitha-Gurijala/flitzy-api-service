@@ -95,13 +95,13 @@ async function calculateTransportPrice(req, res) {
     return res.status(200).send(price);
 }
 
-async function getProducts(req, response) {
+async function getProducts(req, response) {  
     WooCommerce.get('products', async function (err, data, res) {
         let rawJson = JSON.parse(res);
         let finalProductsList = getFinalOutputJson(rawJson, constantFields.products);
-        finalProductsList = refactorProductsObject(finalProductsList);
+        finalProductsList = refactorProductsObject(finalProductsList); 
         
-        let redisKey = 'allCategories';
+        let redisKey = 'allCategories'; 
         let categoriesData = await client.get(redisKey);
         categoriesData = JSON.parse(categoriesData);
 
