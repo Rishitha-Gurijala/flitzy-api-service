@@ -14,6 +14,7 @@ const {
     updateLocation
 } = require("../controller/userController.js");
 const {verifyToken} = require('../middleware/authMiddleware');
+const{initiatePayment, verifyPaymentStatus} = require("../controller/paymentController.js");
 
 
 function getRoutes() {
@@ -27,11 +28,13 @@ function getRoutes() {
     app.get("/api/cartItems/:userId", verifyToken, getCartListItems);
     app.get("/api/checkout/:userId/:storeId", verifyToken, getCheckoutItems);
     app.get("/user/create/:userId", verifyToken, create);
+    app.get("/api/paymentVerification", verifyToken, verifyPaymentStatus);
 
     // POST CALLS
     app.post("/api/wishlist", verifyToken, storeWishList);
     app.post("/api/cart", verifyToken, storeCart);
     app.post("/api/updateLocation", verifyToken, updateLocation);
+    app.post("/api/pay", verifyToken, initiatePayment);
 }
 
 

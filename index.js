@@ -1,11 +1,13 @@
 let express = require('express');
 global.app = express();
+const cors = require("cors");
 
 let bodyParser = require('body-parser');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.raw());
 app.use(bodyParser.text());
+app.use(cors());
 
 const {
     getRoutes

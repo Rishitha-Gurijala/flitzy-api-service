@@ -1,6 +1,7 @@
 const { mongoConnect } = require("../mongoConnect.js");
 var dist = require('geo-distance-js');
 const _ = require("lodash");
+const uniqid = require("uniqid");
 
 const WooCommerceApi = require('woocommerce-api');
 const wooConfig = require('../wooConfig');
@@ -391,7 +392,10 @@ async function getCheckoutItems(req, res) {
         vendorPrice: totalPrices.vendorPrice,
         transportPrice: totalPrices.transportPrice,
         user_id: userId,
-        store_id: storeId
+        store_id: storeId,
+        merchantTransactionId: uniqid(),
+        isTransactionSuccessful: false
+
     }
     checkoutDetails.created_date = new Date();
     await db.collection(checkoutCollection).insertOne(checkoutDetails);
